@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Breakout Game</title>
+
+<style>
+    body {
+        margin: 0;
+        background: #0f172a;
+        font-family: Arial, sans-serif;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
+
+    h1 {
+        margin: 10px 0 5px;
+        font-size: 28px;
+        color: #38bdf8;
+    }
+
+    p {
+        margin: 0 0 15px;
+        font-size: 14px;
+        color: #cbd5e1;
+        text-align: center;
+        max-width: 500px;
+        line-height: 1.4;
+    }
+
+    canvas {
+        background: #1e293b;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    #message {
+        position: absolute;
+        color: white;
+        font-size: 24px;
+        text-align: center;
+        display: none;
+        top: 20px;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>🎮 Breakout Game</h1>
+<p>
+Move your paddle by <b>clicking and dragging</b> left and right.<br>
+Bounce the ball to break all the bricks. Clear them all to win!
+</p>
+
+<canvas id="gameCanvas" width="600" height="400"></canvas>
+
+<div id="message">🎉 Congratulations! You cleared all the bricks! 🎉</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let paddle = {
+    width: 100,
+    height: 12,
+    x: canvas.width / 2 - 50,
+    y: canvas.height - 30
+};
+
+let ball = {
+    x: canvas.width / 2,
+    y: canvas.height - 60,
+    dx: 3,
+    dy: -3,
+    radius: 8
+};
+
+const rows = 5;
+const cols = 8;
+const brickWidth = 65;
+const brickHeight = 20;
+const padding = 10;
+const offsetTop = 40;
+const offsetLeft = 20;
+
+let bricks = [];
+
+for (let r = 0; r < rows; r++) {
+    bricks[r] = [];
+    for (let c = 0; c < cols; c++) {
+        bricks[r][c] = { x: 0, y: 0, status: 1 };
+    }
+}
+
+// Drag controls
+let dragging = false;
+
+canvas.addEventListener("mousedown", () => dragging = true);
+canvas.addEventListener("mouseup", () => dragging = false);
+canvas.addEventListener("mousemove", (e) => {
+    if (dragging) {
+        const rect = canvas.getBoundingClientRect();
+        paddle.x = e.clientX - rect.left - paddle.width / 2;
+
+        if (paddle.x < 0) paddle.x = 0;
+        if (paddle.x + paddle.width > canvas.width)
+            paddle.x = canvas.width - paddle.width;
+    }
+});
+
+function drawPaddle() {
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+}
+
+function drawBall() {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#facc15";
+    ctx.fill();
+    ctx.closePath();
+}
+
+function drawBricks() {
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (bricks[r][c].status === 1) {
+                let brickX = c * (brickWidth + padding) + offsetLeft;
+                let brickY = r * (brickHeight + padding) + offsetTop;
+                bricks[r][c].x = brickX;
+                bricks[r][c].y = brickY;
+
+                ctx.fillStyle = "#f472b6";
+                ctx.fillRect(brickX, brickY, brickWidth, brickHeight);
+            }
+        }
+    }
+}
+
+function collisionDetection() {
+    let remaining = 0;
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            let b = bricks[r][c];
+            if (b.status === 1) {
+                remaining++;
+
+                if (
+                    ball.x > b.x &&
+                    ball.x < b.x + brickWidth &&
+                    ball.y > b.y &&
+                    ball.y < b.y + brickHeight
+                ) {
+                    ball.dy *= -1;
+                    b.status = 0;
+                    remaining--;
+                }
+            }
+        }
+    }
+
+    if (remaining === 0) {
+        document.getElementById("message").style.display = "block";
+        cancelAnimationFrame(animationId);
+    }
+}
+
+function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawBricks();
+    drawPaddle();
+    drawBall();
+    collisionDetection();
+
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
+        ball.dx *= -1;
+    }
+
+    if (ball.y - ball.radius < 0) {
+        ball.dy *= -1;
+    }
+
+    if (
+        ball.y + ball.radius > paddle.y &&
+        ball.x > paddle.x &&
+        ball.x < paddle.x + paddle.width
+    ) {
+        ball.dy = -Math.abs(ball.dy);
+
+        let hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+        ball.dx = hitPoint * 5;
+    }
+
+    if (ball.y + ball.radius > canvas.height) {
+        ball.x = canvas.width / 2;
+        ball.y = canvas.height - 60;
+        ball.dx = 3;
+        ball.dy = -3;
+    }
+
+    animationId = requestAnimationFrame(update);
+}
+
+let animationId = requestAnimationFrame(update);
+</script>
+
+</body>
+</html>
